@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PDF Black &amp; White Converter</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    #output { margin-top: 20px; }
+  </style>
+  <!-- Include pdf.js from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- Include pdf-lib from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+</head>
+<body>
+  <h1>PDF Black &amp; White Converter</h1>
+  <input type="file" id="fileInput" accept="application/pdf">
+  <button id="convertBtn">Convert PDF</button>
+  <div id="output"></div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const convertBtn = document.getElementById("convertBtn");
+    const outputDiv = document.getElementById("output");
+
+    // Function to convert canvas image data to black and white using thresholding
+    function convertCanvasToBW(canvas, threshold = 200) {
+      const ctx = canvas.getContext("2d");
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        // Convert to grayscale
+        const avg = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        // Apply threshold
+        const bw = avg < threshold ? 0 : 255;
+        data[i] = data[i + 1] = data[i + 2] = bw;
+      }
+      ctx.putImageData(imgData, 0, 0);
+      return canvas;
+    }
+
+    // Convert PDF to images, process them, and build a new PDF with pdf-lib
+    async function processPDF(arrayBuffer) {
+      // Load PDF with pdf.js
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      const numPages = pdf.numPages;
+      const processedPages = [];
+
+      // Loop over pages
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        // Determine viewport at scale=2 for quality
+        const scale = 2;
+        const viewport = page.getViewport({ scale });
+        // Create a canvas element to render the page
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d");
+
+        // Render page onto canvas
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        // Convert the canvas image to black and white
+        convertCanvasToBW(canvas);
+
+        // Convert canvas to data URL (PNG)
+        const dataUrl = canvas.toDataURL("image/png");
+        processedPages.push({ dataUrl, width: canvas.width, height: canvas.height });
+      }
+
+      // Create new PDF using pdf-lib
+      const pdfDoc = await PDFLib.PDFDocument.create();
+      for (const pageData of processedPages) {
+        const pngImageBytes = await fetch(pageData.dataUrl).then((res) => res.arrayBuffer());
+        const pngImage = await pdfDoc.embedPng(pngImageBytes);
+        const page = pdfDoc.addPage([pageData.width, pageData.height]);
+        page.drawImage(pngImage, {
+          x: 0,
+          y: 0,
+          width: pageData.width,
+          height: pageData.height,
+        });
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      return pdfBytes;
+    }
+
+    convertBtn.addEventListener("click", async () => {
+      if (!fileInput.files[0]) {
+        alert("Please select a PDF file.");
+        return;
+      }
+      outputDiv.innerHTML = "Processing PDF...";
+      const file = fileInput.files[0];
+      const arrayBuffer = await file.arrayBuffer();
+      try {
+        const newPdfBytes = await processPDF(arrayBuffer);
+        // Create a blob and download link
+        const blob = new Blob([newPdfBytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        outputDiv.innerHTML = `<a href="${url}" download="converted.pdf">Download Converted PDF</a>`;
+      } catch (e) {
+        console.error(e);
+        outputDiv.innerHTML = "Error processing PDF.";
+      }
+    });
+  </script>
+</body>
+</html>
