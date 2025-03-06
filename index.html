@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MonoPDF Magic</title>
+  <title>MonoPDF</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Bootstrap CSS CDN -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -35,7 +35,7 @@
 </head>
 <body>
   <div class="container">
-    <h1 class="text-center mb-4">MonoPDF Magic</h1>
+    <h1 class="text-center mb-4">MonoPDF</h1>
     <div class="card">
       <div class="card-body">
         <p>Select one or more PDF files to convert them to black &amp; white:</p>
@@ -57,9 +57,8 @@
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imgData.data;
       for (let i = 0; i < data.length; i += 4) {
-        // Convert to grayscale
+        // Convert pixel to grayscale
         const avg = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        // Apply threshold
         const bw = avg < threshold ? 0 : 255;
         data[i] = data[i + 1] = data[i + 2] = bw;
       }
@@ -67,15 +66,14 @@
       return canvas;
     }
 
-    // Process a single PDF file and return its new PDF bytes
+    // Process a single PDF and return its new PDF bytes
     async function processSinglePDF(arrayBuffer) {
-      // Load PDF with pdf.js
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
       const numPages = pdf.numPages;
       const processedPages = [];
 
-      // Loop over pages
+      // Process each page
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
         const scale = 2;
@@ -91,10 +89,10 @@
         processedPages.push({ dataUrl, width: canvas.width, height: canvas.height });
       }
 
-      // Create new PDF using pdf-lib
+      // Create a new PDF using pdf-lib
       const pdfDoc = await PDFLib.PDFDocument.create();
       for (const pageData of processedPages) {
-        const pngImageBytes = await fetch(pageData.dataUrl).then((res) => res.arrayBuffer());
+        const pngImageBytes = await fetch(pageData.dataUrl).then(res => res.arrayBuffer());
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
         const page = pdfDoc.addPage([pageData.width, pageData.height]);
         page.drawImage(pngImage, {
@@ -104,7 +102,6 @@
           height: pageData.height,
         });
       }
-
       const pdfBytes = await pdfDoc.save();
       return pdfBytes;
     }
@@ -112,14 +109,15 @@
     // Process all selected PDF files
     async function processPDFs(files) {
       outputDiv.innerHTML = "";
+      let fileCounter = 0;
       for (const file of files) {
-        // Create a card for each file to show its progress and download link
+        const safeId = "file-" + fileCounter++;
         const card = document.createElement("div");
         card.className = "card";
         card.innerHTML = `
           <div class="card-body">
             <h5 class="card-title">${file.name}</h5>
-            <p class="card-text" id="status-${file.name}">Processing...</p>
+            <p class="card-text" id="status-${safeId}">Processing...</p>
             <div class="progress">
               <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
               style="width: 100%"></div>
@@ -133,10 +131,10 @@
           const newPdfBytes = await processSinglePDF(arrayBuffer);
           const blob = new Blob([newPdfBytes], { type: "application/pdf" });
           const url = URL.createObjectURL(blob);
-          card.querySelector(`#status-${file.name}`).innerHTML = `<a href="${url}" download="${file.name.replace('.pdf','')}-converted.pdf">Download Converted PDF</a>`;
+          document.getElementById("status-" + safeId).innerHTML = `<a href="${url}" download="${file.name.replace('.pdf','')}-converted.pdf">Download Converted PDF</a>`;
         } catch (e) {
           console.error(e);
-          card.querySelector(`#status-${file.name}`).textContent = "Error processing this PDF.";
+          document.getElementById("status-" + safeId).textContent = "Error processing this PDF.";
         }
       }
     }
