@@ -52,6 +52,10 @@
     .dark-mode .progress-bar {
       background-color: #666 !important;
     }
+    /* Override green progress bar in dark mode */
+    .dark-mode .bg-success {
+      background-color: #28a745 !important;
+    }
   </style>
 
   <!-- pdf.js -->
@@ -167,9 +171,7 @@
 
     async function processPDFs(files) {
       outputDiv.innerHTML = "";
-      // Clear any previous converted files
       convertedFiles.length = 0;
-      // Clear previous Download All button if present
       downloadAllContainer.innerHTML = "";
       let fileCounter = 0;
 
@@ -194,13 +196,11 @@
           const blob = new Blob([newPdfBytes], { type: "application/pdf" });
           const url = URL.createObjectURL(blob);
 
-          // Update the card with a download link
           document.getElementById("status-" + safeId).innerHTML = `
             <a href="${url}" download="${file.name.replace('.pdf','')}-converted.pdf">
               Download Converted PDF
             </a>
           `;
-          // Save the converted file for zipping later
           convertedFiles.push({
             fileName: file.name.replace('.pdf', '') + "-converted.pdf",
             blob: blob
@@ -211,17 +211,14 @@
         } finally {
           const progressBar = document.getElementById(`progress-bar-${safeId}`);
           progressBar.classList.remove("progress-bar-striped", "progress-bar-animated");
-          // Change the progress bar to green to indicate completion
           progressBar.classList.add("bg-success");
         }
       }
-      // If at least one file was converted, add the Download All button.
       if (convertedFiles.length > 0) {
         addDownloadAllButton();
       }
     }
 
-    // Create and display the Download All button
     function addDownloadAllButton() {
       const downloadBtn = document.createElement("button");
       downloadBtn.className = "btn btn-success";
@@ -231,7 +228,6 @@
       downloadAllContainer.appendChild(downloadBtn);
     }
 
-    // When the Download All button is clicked, zip all converted PDFs
     async function downloadAllAsZip() {
       const zip = new JSZip();
       convertedFiles.forEach(fileObj => {
