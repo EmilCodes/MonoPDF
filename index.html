@@ -11,6 +11,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <!-- JSZip Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
 
   <style>
     body {
@@ -30,7 +32,6 @@
     .progress {
       margin-top: 10px;
     }
-
     /* Dark Mode Styling */
     .dark-mode {
       background-color: #121212 !important;
@@ -76,7 +77,10 @@
       </div>
     </div>
     
+    <!-- Area for file conversion cards -->
     <div id="output"></div>
+    <!-- Container for Download All button -->
+    <div id="downloadAllContainer" class="mb-4"></div>
   </div>
 
   <script>
@@ -85,19 +89,20 @@
     const outputDiv = document.getElementById("output");
     const darkModeBtn = document.getElementById("darkModeBtn");
     const themeText = document.getElementById("themeText");
+    const downloadAllContainer = document.getElementById("downloadAllContainer");
+
+    // Array to store converted files for zipping
+    const convertedFiles = [];
 
     // --- DARK MODE SETUP ---
-    // Check localStorage for user’s dark mode preference
     const userPrefersDark = localStorage.getItem("darkMode") === "enabled";
     applyDarkMode(userPrefersDark);
 
-    // Toggle dark mode on button click
     darkModeBtn.addEventListener("click", () => {
       const isDarkNow = document.body.classList.contains("dark-mode");
       applyDarkMode(!isDarkNow);
     });
 
-    // Apply or remove dark mode, save preference
     function applyDarkMode(enable) {
       if (enable) {
         document.body.classList.add("dark-mode");
@@ -111,13 +116,11 @@
     }
 
     // --- PDF CONVERSION LOGIC ---
-    // Convert canvas image data to black & white
     function convertCanvasToBW(canvas, threshold = 200) {
       const ctx = canvas.getContext("2d");
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imgData.data;
       for (let i = 0; i < data.length; i += 4) {
-        // Convert pixel to grayscale
         const avg = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
         const bw = avg < threshold ? 0 : 255;
         data[i] = data[i + 1] = data[i + 2] = bw;
@@ -126,7 +129,6 @@
       return canvas;
     }
 
-    // Process a single PDF -> returns new PDF bytes
     async function processSinglePDF(arrayBuffer) {
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
@@ -144,12 +146,10 @@
 
         await page.render({ canvasContext: ctx, viewport }).promise;
         convertCanvasToBW(canvas);
-
         const dataUrl = canvas.toDataURL("image/png");
         processedPages.push({ dataUrl, width: canvas.width, height: canvas.height });
       }
 
-      // Build a new PDF with pdf-lib
       const pdfDoc = await PDFLib.PDFDocument.create();
       for (const pageData of processedPages) {
         const pngImageBytes = await fetch(pageData.dataUrl).then(res => res.arrayBuffer());
@@ -162,16 +162,18 @@
           height: pageData.height,
         });
       }
-
       return await pdfDoc.save();
     }
 
-    // Process all selected PDFs
     async function processPDFs(files) {
       outputDiv.innerHTML = "";
+      // Clear any previous converted files
+      convertedFiles.length = 0;
+      // Clear previous Download All button if present
+      downloadAllContainer.innerHTML = "";
       let fileCounter = 0;
+
       for (const file of files) {
-        // Create a unique ID for progress bar
         const safeId = "file-" + fileCounter++;
         const card = document.createElement("div");
         card.className = "card";
@@ -192,24 +194,57 @@
           const blob = new Blob([newPdfBytes], { type: "application/pdf" });
           const url = URL.createObjectURL(blob);
 
-          // Update the card
+          // Update the card with a download link
           document.getElementById("status-" + safeId).innerHTML = `
             <a href="${url}" download="${file.name.replace('.pdf','')}-converted.pdf">
               Download Converted PDF
             </a>
           `;
+          // Save the converted file for zipping later
+          convertedFiles.push({
+            fileName: file.name.replace('.pdf', '') + "-converted.pdf",
+            blob: blob
+          });
         } catch (e) {
           console.error(e);
           document.getElementById("status-" + safeId).textContent = "Error processing this PDF.";
         } finally {
-          // Remove the animated progress bar effect
           const progressBar = document.getElementById(`progress-bar-${safeId}`);
           progressBar.classList.remove("progress-bar-striped", "progress-bar-animated");
+          // Change the progress bar to green to indicate completion
+          progressBar.classList.add("bg-success");
         }
+      }
+      // If at least one file was converted, add the Download All button.
+      if (convertedFiles.length > 0) {
+        addDownloadAllButton();
       }
     }
 
-    // Button click -> process
+    // Create and display the Download All button
+    function addDownloadAllButton() {
+      const downloadBtn = document.createElement("button");
+      downloadBtn.className = "btn btn-success";
+      downloadBtn.textContent = "Download All Converted PDFs (ZIP)";
+      downloadBtn.addEventListener("click", downloadAllAsZip);
+      downloadAllContainer.innerHTML = "";
+      downloadAllContainer.appendChild(downloadBtn);
+    }
+
+    // When the Download All button is clicked, zip all converted PDFs
+    async function downloadAllAsZip() {
+      const zip = new JSZip();
+      convertedFiles.forEach(fileObj => {
+        zip.file(fileObj.fileName, fileObj.blob);
+      });
+      const content = await zip.generateAsync({ type: "blob" });
+      const zipUrl = URL.createObjectURL(content);
+      const a = document.createElement("a");
+      a.href = zipUrl;
+      a.download = "converted_pdfs.zip";
+      a.click();
+    }
+
     convertBtn.addEventListener("click", async () => {
       if (!fileInput.files.length) {
         alert("Please select at least one PDF file.");
