@@ -11,14 +11,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-  <!-- Font Awesome (for sun/moon icons) -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-    integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D9WzE0KqZb2CR0Oz5b4f1tZRGjs6Uk1E8SqfJPXfXgmRVRbslfX7v2aY9bYJ0S4A=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  />
 
   <style>
     body {
@@ -72,7 +64,6 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1 class="m-0">MonoPDF</h1>
       <button id="darkModeBtn" class="btn btn-secondary">
-        <i id="themeIcon" class="fas fa-moon"></i>
         <span id="themeText">Dark Mode</span>
       </button>
     </div>
@@ -93,11 +84,10 @@
     const convertBtn = document.getElementById("convertBtn");
     const outputDiv = document.getElementById("output");
     const darkModeBtn = document.getElementById("darkModeBtn");
-    const themeIcon = document.getElementById("themeIcon");
     const themeText = document.getElementById("themeText");
 
     // --- DARK MODE SETUP ---
-    // Check localStorage to see if user has dark mode preference
+    // Check localStorage for user’s dark mode preference
     const userPrefersDark = localStorage.getItem("darkMode") === "enabled";
     applyDarkMode(userPrefersDark);
 
@@ -107,19 +97,15 @@
       applyDarkMode(!isDarkNow);
     });
 
-    // Function to apply or remove dark mode
+    // Apply or remove dark mode, save preference
     function applyDarkMode(enable) {
       if (enable) {
         document.body.classList.add("dark-mode");
         localStorage.setItem("darkMode", "enabled");
-        themeIcon.classList.remove("fa-moon");
-        themeIcon.classList.add("fa-sun");
         themeText.textContent = "Light Mode";
       } else {
         document.body.classList.remove("dark-mode");
         localStorage.setItem("darkMode", "disabled");
-        themeIcon.classList.remove("fa-sun");
-        themeIcon.classList.add("fa-moon");
         themeText.textContent = "Dark Mode";
       }
     }
