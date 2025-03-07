@@ -261,7 +261,7 @@
       });
       const content = await zip.generateAsync({ type: "blob" });
       const zipUrl = URL.createObjectURL(content);
-      const zipDownload = document.createElement("zipDownload");
+      const zipDownload = document.createElement("a");
       zipDownload.href = zipUrl;
       zipDownload.download = "converted_pdfs.zip";
       zipDownload.click();
