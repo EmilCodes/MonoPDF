@@ -171,9 +171,9 @@
 
         if (removeNonBlackCheckbox.checked) {
           removeNonBlackPixels(canvas);
-        } else {
-          thresholdCanvas(canvas);
         }
+        
+        thresholdCanvas(canvas);
 
         const dataUrl = canvas.toDataURL("image/png");
         processedPages.push({ dataUrl, width: canvas.width, height: canvas.height });
@@ -201,15 +201,15 @@
       let fileCounter = 0;
 
       for (const file of files) {
-        const safeId = "file-" + fileCounter++;
+        const id = "file-" + fileCounter++;
         const card = document.createElement("div");
         card.className = "card";
         card.innerHTML = `
           <div class="card-body">
             <h5 class="card-title">${file.name}</h5>
-            <p class="card-text" id="status-${safeId}">Processing...</p>
+            <p class="card-text" id="status-${id}">Processing...</p>
             <div class="progress">
-              <div id="progress-bar-${safeId}" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+              <div id="progress-bar-${id}" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
             </div>
           </div>
         `;
@@ -221,7 +221,7 @@
           const blob = new Blob([newPdfBytes], { type: "application/pdf" });
           const url = URL.createObjectURL(blob);
 
-          document.getElementById("status-" + safeId).innerHTML = `
+          document.getElementById("status-" + id).innerHTML = `
             <a href="${url}" download="${file.name.replace('.pdf','')}-converted.pdf">
               Download Converted PDF
             </a>
@@ -232,9 +232,9 @@
           });
         } catch (e) {
           console.error(e);
-          document.getElementById("status-" + safeId).textContent = "Error processing this PDF.";
+          document.getElementById("status-" + id).textContent = "Error processing this PDF.";
         } finally {
-          const progressBar = document.getElementById(`progress-bar-${safeId}`);
+          const progressBar = document.getElementById(`progress-bar-${id}`);
           progressBar.classList.remove("progress-bar-striped", "progress-bar-animated");
           progressBar.classList.add("bg-success");
         }
