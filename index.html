@@ -49,14 +49,13 @@
     .dark-mode .progress-bar {
       background-color: #666 !important;
     }
+    /* Override green progress bar in dark mode */
     .dark-mode .bg-success {
       background-color: #28a745 !important;
     }
   </style>
 
-  <!-- pdf.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <!-- pdf-lib -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
 <body>
@@ -72,14 +71,14 @@
     <!-- Conversion Card -->
     <div class="card">
       <div class="card-body">
-        <p>Select one or more PDF files to remove highlights and convert to black &amp; white:</p>
+        <p>Select one or more PDF files to convert them to black &amp; white:</p>
         <input type="file" id="fileInput" accept="application/pdf" multiple class="form-control mb-3">
         
-        <!-- Checkbox for removing non-black text -->
+        <!-- New checkbox for removing non-black text -->
         <div class="form-check mb-3">
           <input class="form-check-input" type="checkbox" id="removeNonBlackCheckbox">
           <label class="form-check-label" for="removeNonBlackCheckbox">
-            Remove all non-black text
+            Remove all non-black text (harsh mode)
           </label>
         </div>
 
@@ -89,6 +88,7 @@
     
     <!-- Area for file conversion cards -->
     <div id="output"></div>
+    <!-- Container for Download All button -->
     <div id="downloadAllContainer" class="mb-4"></div>
   </div>
 
@@ -100,7 +100,7 @@
     const themeText = document.getElementById("themeText");
     const downloadAllContainer = document.getElementById("downloadAllContainer");
     const removeNonBlackCheckbox = document.getElementById("removeNonBlackCheckbox");
-
+    
     const convertedFiles = [];
 
     const userPrefersDark = localStorage.getItem("darkMode") === "enabled";
@@ -141,23 +141,17 @@
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imgData.data;
       for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
+        const r = data[i], g = data[i + 1], b = data[i + 2];
         if (r < blackThreshold && g < blackThreshold && b < blackThreshold) {
-          data[i] = 0;   // R
-          data[i + 1] = 0; // G
-          data[i + 2] = 0; // B
+          data[i] = data[i + 1] = data[i + 2] = 0;
         } else {
-          data[i] = 255;
-          data[i + 1] = 255;
-          data[i + 2] = 255;
+          data[i] = data[i + 1] = data[i + 2] = 255;
         }
       }
       ctx.putImageData(imgData, 0, 0);
       return canvas;
     }
-    
+
     async function processSinglePDF(arrayBuffer) {
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
@@ -174,11 +168,13 @@
         const ctx = canvas.getContext("2d");
 
         await page.render({ canvasContext: ctx, viewport }).promise;
-        thresholdCanvas(canvas, 200);
+
         if (removeNonBlackCheckbox.checked) {
-          removeNonBlackPixels(canvas, 50); 
+          removeNonBlackPixels(canvas, 50);
+        } else {
+          thresholdCanvas(canvas, 200);
         }
-        
+
         const dataUrl = canvas.toDataURL("image/png");
         processedPages.push({ dataUrl, width: canvas.width, height: canvas.height });
       }
@@ -205,15 +201,15 @@
       let fileCounter = 0;
 
       for (const file of files) {
-        const id = "file-" + fileCounter++;
+        const safeId = "file-" + fileCounter++;
         const card = document.createElement("div");
         card.className = "card";
         card.innerHTML = `
           <div class="card-body">
             <h5 class="card-title">${file.name}</h5>
-            <p class="card-text" id="status-${id}">Processing...</p>
+            <p class="card-text" id="status-${safeId}">Processing...</p>
             <div class="progress">
-              <div id="progress-bar-${id}" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+              <div id="progress-bar-${safeId}" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
             </div>
           </div>
         `;
@@ -225,7 +221,7 @@
           const blob = new Blob([newPdfBytes], { type: "application/pdf" });
           const url = URL.createObjectURL(blob);
 
-          document.getElementById("status-" + id).innerHTML = `
+          document.getElementById("status-" + safeId).innerHTML = `
             <a href="${url}" download="${file.name.replace('.pdf','')}-converted.pdf">
               Download Converted PDF
             </a>
@@ -236,9 +232,9 @@
           });
         } catch (e) {
           console.error(e);
-          document.getElementById("status-" + id).textContent = "Error processing this PDF.";
+          document.getElementById("status-" + safeId).textContent = "Error processing this PDF.";
         } finally {
-          const progressBar = document.getElementById(`progress-bar-${id}`);
+          const progressBar = document.getElementById(`progress-bar-${safeId}`);
           progressBar.classList.remove("progress-bar-striped", "progress-bar-animated");
           progressBar.classList.add("bg-success");
         }
