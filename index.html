@@ -78,7 +78,7 @@
         <div class="form-check mb-3">
           <input class="form-check-input" type="checkbox" id="removeNonBlackCheckbox">
           <label class="form-check-label" for="removeNonBlackCheckbox">
-            Remove all non-black text (harsh mode)
+            Remove all non-black text
           </label>
         </div>
 
@@ -136,7 +136,7 @@
       return canvas;
     }
 
-    function removeNonBlackPixels(canvas, blackThreshold = 100) {
+    function removeNonBlackPixels(canvas, blackThreshold = 200) {
       const ctx = canvas.getContext("2d");
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imgData.data;
@@ -261,10 +261,10 @@
       });
       const content = await zip.generateAsync({ type: "blob" });
       const zipUrl = URL.createObjectURL(content);
-      const a = document.createElement("a");
-      a.href = zipUrl;
-      a.download = "converted_pdfs.zip";
-      a.click();
+      const zipDownload = document.createElement("zipDownload");
+      zipDownload.href = zipUrl;
+      zipDownload.download = "converted_pdfs.zip";
+      zipDownload.click();
     }
 
     convertBtn.addEventListener("click", async () => {
