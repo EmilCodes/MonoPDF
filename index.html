@@ -171,10 +171,10 @@
 
         if (removeNonBlackCheckbox.checked) {
           removeNonBlackPixels(canvas);
-        }
+        } else {
+	  thresholdCanvas(canvas);
+	}
         
-        thresholdCanvas(canvas);
-
         const dataUrl = canvas.toDataURL("image/png");
         processedPages.push({ dataUrl, width: canvas.width, height: canvas.height });
       }
